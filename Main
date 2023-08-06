@@ -1,113 +1,30 @@
-package chess
-import kotlin.math.abs
+package minesweeper
+
+fun generateMinefield(rows: Int, cols: Int, numMines: Int): Array<Array<Char>> {
+    val minefield = Array(rows) { Array(cols) { ',' } }
+    var numMinesPlaced = 0
+    while (numMinesPlaced < numMines) {
+        val row = (0 until rows).random()
+        val col = (0 until cols).random()
+        if (minefield[row][col] != 'M') {
+            minefield[row][col] = 'M'
+            numMinesPlaced++
+        }
+    }
+    return minefield
+}
+
+fun printMinefield(minefield: Array<Array<Char>>) {
+    for (row in minefield) {
+        println(row.joinToString(""))
+    }
+}
 
 fun main() {
-    println("Pawns-Only Chess")
-    println("First Player's name:")
-    val player1 = readln()
-    println("Second Player's name:")
-    val player2 = readln()
-    val game = PawnChessGame(player1, player2)
-    game.playChessGame()
-}
-enum class ChessPiece(val symbol: String) {
-    White("W"), Black("B"), EMPTY(" "), INVALID("Invalid Input")
+    val rows = 9
+    val cols = 9
+    val numMines = 10
+    val minefield = generateMinefield(rows, cols, numMines)
+    printMinefield(minefield)
 }
 
-class PawnChessGame(private val player1: String, private val player2: String) {
-    private var board: MutableList<MutableList<String>> = mutableListOf()
-    private var currentPlayer: String  = player1
-    private var chessPiece: String = ChessPiece.White.symbol
-    val won: Boolean = false
-    init {
-        board = createBoard()
-        board.startingGame()
-    }
-
-    fun playChessGame(){
-        gameStatus(board)
-        var previousMove: String? = null
-        while (true) {
-            println("$currentPlayer's turn:")
-            val input = readln()
-            if(input == "exit") {
-                break
-            }
-            if(validPlayerMove(input, board, chessPiece, previousMove) == null){
-                playerMove(board, input, chessPiece, previousMove)
-                gameStatus(board)
-                if (checkPlayerWin() != null) {
-                    println(checkPlayerWin())
-                    break
-                }
-                previousMove = input
-                if (currentPlayer == player1) {
-                    chessPiece = ChessPiece.Black.symbol
-                    currentPlayer = player2
-                } else {
-                    chessPiece = ChessPiece.White.symbol
-                    currentPlayer = player1
-                }
-            }
-            else println(validPlayerMove(input, board, chessPiece, previousMove ))
-        }
-        println("Bye!")
-    }
-
-    private fun checkPlayerWin(): String? {
-        if (board[0].contains(ChessPiece.White.symbol) || board.all { !it.contains(ChessPiece.Black.symbol) }) return "${ChessPiece.White.name} wins!"
-        if (board[7].contains(ChessPiece.Black.symbol) || board.all { !it.contains(ChessPiece.White.symbol) }) return "${ChessPiece.Black.name} wins!"
-
-        return null
-    }
-
-    private fun playerMove(board: MutableList<MutableList<String>>, move: String, color: String, previousMove: String?) {
-        val (x1, y1, x2, y2) = move.map { it.toIndex() }
-        val (a1, b1, a2, b2) = previousMove?.map { it.toIndex() } ?: listOf(0, 0, 0, 0)
-        board[8 - y1][x1] = ChessPiece.EMPTY.symbol
-        board[8 - y2][x2] = color
-        if (enPassant(y1, x2, b1, a2, b2)) board[8 - b2][a2] = ChessPiece.EMPTY.symbol
-    }
-
-    private fun validPlayerMove(playerMove: String, board: MutableList<MutableList<String>>, color: String, previousMove: String?): String? {
-        if (!playerMove.validMove()) return ChessPiece.INVALID.symbol
-        val (x1, y1, x2, y2) = playerMove.map { it.toIndex() }
-        val (a1, b1, a2, b2) = previousMove?.map { it.toIndex() } ?: listOf(0, 0, 0, 0)
-        val number = 8-y1
-        if(board[number][x1] == ChessPiece.EMPTY.symbol) return "No $color pawn at ${(x1 + 97).toChar()}$y1"
-        if (board[number][x1] != color[0].toString()) return "No $color pawn at ${(x1 + 97).toChar()}$y1"
-        if (y1 == y2) return ChessPiece.INVALID.symbol
-        if (x1 == x2) {
-            if (!(number ==  1 || number == 6) && abs(8 - y2 - number) > 1 || ((number == 1 || number == 6) && abs(8 - y2 - number) > 2)) return ChessPiece.INVALID.symbol
-            if ((color == ChessPiece.White.symbol && y2 < y1) || (color == ChessPiece.Black.symbol && y2 > y1) || board[8 - y2][x2] != " ") return ChessPiece.INVALID.symbol
-        } else {
-            if (abs(x2 - x1) > 1 || abs(8 - y2 - number) > 1) return ChessPiece.INVALID.symbol
-            if (color == ChessPiece.White.symbol) {
-                if (y2 < y1 || board[8 - y2][x2] == ChessPiece.White.symbol || (board[8-y2][x2] == ChessPiece.EMPTY.symbol && !enPassant(y1, x2, b1, a2, b2 ))) return ChessPiece.INVALID.symbol
-            } else if (color == ChessPiece.Black.symbol) {
-                if (y2 > y1 ||board[8 - y2][x2] == ChessPiece.Black.symbol || (board[8-y2][x2] == ChessPiece.EMPTY.symbol && !enPassant( y1, x2, b1, a2, b2 ))) return ChessPiece.INVALID.symbol
-            }
-        }
-        return null
-    }
-    private fun gameStatus(board: MutableList<MutableList<String>>) {
-        for (i in 0 .. 7) {
-            println("  +---+---+---+---+---+---+---+---+")
-            print("${8 - i} |")
-            for (j in 0..7) print(" ${board[i][j]} |")
-            println()
-        }
-        println("  +---+---+---+---+---+---+---+---+\n    a   b   c   d   e   f   g   h  \n")
-    }
-
-    private fun MutableList<MutableList<String>>.startingGame() = apply {
-        for (i in 0..7) {
-            this[1][i] = ChessPiece.Black.symbol
-            this[6][i] = ChessPiece.White.symbol
-        }
-    }
-    private fun enPassant(y1: Int, x2: Int, b1: Int, a2: Int, b2: Int): Boolean = a2 == x2 && y1 == b2 && abs(b2 - b1) == 2
-    private fun Char.toIndex(): Int = if (!this.isDigit()) this.code - 97 else this.toString().toInt()
-    private fun String.validMove(): Boolean =Regex("[a-h][1-8][a-h][1-8]|exit").matches(this)
-    private fun createBoard(): MutableList<MutableList<String>> = MutableList(8) { MutableList(8) { ChessPiece.EMPTY.symbol } }
-}
