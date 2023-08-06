@@ -1,7 +1,8 @@
 package minesweeper
 
 fun main() {
-    val numMines = 10
+    print("How many mines do you want on the field?")
+    val numMines = readln().toInt()
     val minefield = createEmptyMineField().putRandomMines(numMines)
     displayMinefield(minefield)
 }
@@ -17,8 +18,8 @@ fun Array<Array<Char>>.putRandomMines(numMines: Int) = apply{
     while (numMinesPlaced < numMines) {
         val row = indices.random()
         val col = this[0].indices.random()
-        if (this[row][col] != 'M') {
-            this[row][col] = 'M'
+        if (this[row][col] != 'X') {
+            this[row][col] = 'X'
             numMinesPlaced++
         }
     }
