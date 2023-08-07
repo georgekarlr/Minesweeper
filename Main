@@ -1,26 +1,156 @@
 package minesweeper
 
+import kotlin.random.Random
+
 fun main() {
-    val numMines = 10
-    val minefield = createEmptyMineField().putRandomMines(numMines)
-    displayMinefield(minefield)
+    print("How many mines do you want on the field? ")
+    val game = MineSweeperGame(readln().toInt())
+    game.game()
 }
 
-fun displayMinefield(minefield: Array<Array<Char>>) {
-    for (row in minefield) {
-        println(row.joinToString(""))
+
+class MineSweeperGame(mines: Int) {
+    private val mineField = createMineField().putRandomMines(mines).hintNumberMines()
+    private val answerField = mineField.copyOf2DList().replaceAllSameValue('/', '.')
+    private val visited = createMineField()
+    private val playerCell = createMineField()
+    private var gameLost: Boolean = false
+    fun game() {
+        val answerKeyForAllMines = answerField.arrayIndex().sortedDescending().toMutableList()
+        val answerAllSafeCell = answerField.copyOf2DList().replaceAllSameValue('.', 'X')
+        val listAnswer = mutableListOf<String>()
+        displayMineField(playerCell)
+        do {
+            print("Set/delete mines marks (x and y coordinates): ")
+            val coordinates = readln()
+            val (r, c, freeOrMine) = coordinates.split(" ")
+            val col = c.toInt() - 1
+            val row = r.toInt() - 1
+
+            when (freeOrMine) {
+                "mine" -> {
+                    if (playerCell[col][row] == '.') {
+                        playerCell[col][row] = '*'
+                        listAnswer.add("$col$row")
+                        displayMineField(playerCell)
+                    } else {
+                        playerCell[col][row] = '.'
+                        listAnswer.remove("$col$row")
+                        displayMineField(playerCell)
+                    }
+                }
+
+                "free" -> {
+                    if (playerCell[col][row] == '.' && answerField[col][row] == '/') {
+                        freeCell(col, row)
+                        displayMineField(playerCell)
+                    } else if (answerField[col][row].isDigit()) {
+                        playerCell[col][row] = answerField[col][row]
+                        displayMineField(playerCell)
+                    } else if (answerField[col][row] == 'X') {
+                        playerCell[col][row] = answerField[col][row]
+                        gameLost = true
+                    }
+                }
+            }
+            listAnswer.sortedDescending()
+            if (gameLost) {
+                println("You stepped on a mine and failed!")
+                displayMineField(playerCell)
+                break
+            } else if (playerCell.contentDeepEquals(answerAllSafeCell) || listAnswer == answerKeyForAllMines) {
+                println("Congratulations! You found all the mines!")
+                break
+            }
+
+
+        } while (true)
+
     }
-}
 
-fun Array<Array<Char>>.putRandomMines(numMines: Int) = apply{
-    var numMinesPlaced = 0
-    while (numMinesPlaced < numMines) {
-        val row = indices.random()
-        val col = this[0].indices.random()
-        if (this[row][col] != 'M') {
-            this[row][col] = 'M'
-            numMinesPlaced++
+    private fun Array<Array<Char>>.copyOf2DList() = Array(this.size) { this[it].copyOf() }
+
+    private fun Array<Array<Char>>.replaceAllSameValue(newValue: Char = '*', oldValue: Char = 'X'): Array<Array<Char>> {
+        for (i in this.indices) {
+            for (j in this[i].indices) {
+                if (this[i][j] == oldValue) this[i][j] = newValue
+            }
+        }
+        return this
+    }
+
+    private fun Array<Array<Char>>.arrayIndex(): List<String> {
+        var s = ""
+        for (i in this.indices) {
+            for (j in this[i].indices) {
+                if (this[i][j] == 'X') s += "${j + 1}${i + 1}"
+            }
+        }
+        return s.chunked(2)
+    }
+
+    private fun createMineField() = Array(9) { Array(9) { '.' } }
+
+    private fun displayMineField(mineFields: Array<Array<Char>>) {
+        println(" │123456789│")
+        println("—│—————————│")
+        for (i in mineFields.indices) {
+            println("${i + 1}│${mineFields[i].joinToString("")}│")
+        }
+        println("—│—————————│")
+    }
+
+
+    private fun Array<Array<Char>>.putRandomMines(mines: Int): Array<Array<Char>> {
+        var count = 0
+        while (count != mines) {
+            val row = Random.nextInt(9)
+            val col = Random.nextInt(9)
+            if (this[row][col] == '.') {
+                this[row][col] = 'X'
+                count++
+            }
+        }
+        return this
+    }
+
+    private fun Array<Array<Char>>.hintNumberMines(): Array<Array<Char>> {
+        for (i in 0..8) {
+            for (j in 0..8) {
+                if (this[i][j] == '.') {
+                    var count = 0
+                    for (x in i - 1..i + 1) {
+                        for (y in j - 1..j + 1) {
+                            if (x in 0..8 && y in 0..8 && this[x][y] == 'X') {
+                                count++
+                            }
+                        }
+                    }
+                    if (count > 0) this[i][j] = "$count".first()
+                }
+            }
+        }
+        return this
+    }
+
+
+    private fun freeCell(col: Int, row: Int) {
+        if (col !in 0..8 || row !in 0..8 || visited[col][row] == '0') return
+
+        visited[col][row] = '0'
+
+        if (answerField[col][row] == '/') {
+            playerCell[col][row] = answerField[col][row]
+            freeCell(col - 1, row - 1)
+            freeCell(col - 1, row)
+            freeCell(col - 1, row + 1)
+            freeCell(col, row - 1)
+            freeCell(col, row + 1)
+            freeCell(col + 1, row - 1)
+            freeCell(col + 1, row)
+            freeCell(col + 1, row + 1)
+        } else {
+            playerCell[col][row] = answerField[col][row]
         }
     }
 }
-fun createEmptyMineField(): Array<Array<Char>> = Array(9) { Array(9) { '.' } }
